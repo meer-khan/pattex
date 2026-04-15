@@ -14,7 +14,7 @@ Extractors:
 
 from typing import Literal
 
-from pattex.constants.regexes import _EMAIL, _URL, _DOMAIN, _IPV4, _IPV6, _SLUG
+from pattex.constants.regexes import _EMAIL, _URL, _DOMAIN, _IPV4, _IPV6, _SLUG, _EMAIL_RFC5322
 from pattex._utils._utils import _length_check
 # ───────────────────────────── patterns ─────────────────────────────
 
@@ -35,42 +35,115 @@ from pattex._utils._utils import _length_check
 
 
 
-def extract_emails(text: str, mode=Literal["practical", "rfc-5322"]) -> list[str]:
-    """Extract all email addresses from text."""
-    raw_list = _EMAIL.findall(text)
+def extract_emails(text: str, mode:Literal["practical", "rfc5322"]="practical") -> list[str]:
+    """
+    Extract all email addresses from text.
 
+    Args
+    ----------
+    text : str
+        The input text to extract emails from.
+    mode : Literal["practical", "rfc5322"]
+        Extraction mode. Default is "practical".
+
+        "practical":
+            Covers the vast majority of real-world emails.
+            Enforces the following rules:
+            - Max total length of 320 characters
+            - Local part rules:
+                * Only alphanumeric and . _ + - allowed
+                * Cannot start or end with a dot
+                * No consecutive dots (..)
+                * No consecutive hyphens (--)
+                * No consecutive plus signs (++)
+                * Local part max length 64 characters
+            - Domain part rules:
+                * Only alphanumeric, dots, and hyphens allowed
+                * Cannot start or end with a dot or hyphen
+                * No consecutive dots (..)
+                * TLD must be at least 2 characters
+                * Domain max length 255 characters
+
+        "rfc5322":
+            Follows the RFC 5322 specification. More permissive than
+            practical mode. Allows:
+                * Quoted local parts e.g. "john doe"@example.com
+                * Special characters in local part: !#$%&'*+/=?^_`{|}~-
+                * IP address literals e.g. user@[192.168.1.1]
+                * Escaped characters inside quoted strings
+            Does not validate:
+                * Comments e.g. (comment)user@example.com
+                * Folding whitespace
+            Use this mode when parsing emails from raw email headers
+            or mail server logs.
+
+    Returns
+    -------
+    list[str]
+        List of extracted email addresses. Empty list if none found.
+
+    Examples
+    --------
+    >>> extract_emails("contact me at foo@bar.com", mode="practical")
+    ['foo@bar.com']
+
+    >>> extract_emails('send to "john doe"@example.com', mode="rfc5322")
+    ['"john doe"@example.com']
+    """
+    raw_list: list[str] = _EMAIL.findall(text)
+
+    if mode == "rfc5322":
+        return _EMAIL_RFC5322.findall(text)
+    
+    refined_list = []
     if mode == "pracical":
-        refined_list = []
+        
         # email should not start and end with dot
         # emails's local part should not have special characters other than dot, underscore, hyphen and plus
         # email's domain part should not have special characters other than dot and hyphen
         # email should not have consecutive dots in local part and domain part
         
         for email in raw_list:
-            
-            local_part, domain_part = email.split("@")
+            local_part, domain_part = email.split("@", maxsplit=1)
             if len(email) > 320:  # max length of an email address [gmail, yahoo, outlook]
+                continue
+            
+            # local part length check (RFC says max 64)
+            if len(local_part) > 64:
+                continue
+
+            # domain part length check
+            if len(domain_part) > 255:
+                continue
+
+            # tld length check
+            tld = domain_part.rsplit(".", 1)[-1]
+            if len(tld) < 2:
                 continue
             if (
                 # LOCAL PART RULES
-                not local_part.startswith(".")
-                and not local_part.endswith(".")
-                and ".." not in local_part
-                and "--" not in local_part
-                and "++" not in local_part
-                and all(c.isalnum() or c in "._+-" for c in local_part)
+                not local_part.startswith(".")       # no leading dot
+                and not local_part.endswith(".")     # no trailing dot
+                and not local_part.startswith("-")   # no leading hyphen
+                and not local_part.endswith("-")     # no trailing hyphen
+                and ".." not in local_part           # no consecutive dots
+                and "--" not in local_part           # no consecutive hyphens
+                and "++" not in local_part           # no consecutive plus signs
+                and all(c.isalnum() or c in "._+-" for c in local_part)  # allowed chars only
                 # DOMAIN PART RULES
-                and not domain_part.startswith(".")
-                and not domain_part.endswith(".")
-                and ".." not in domain_part
-                and "--" not in domain_part
-                and "++" not in domain_part
-                and all(c.isalnum() or c in ".-" for c in domain_part)
+                and not domain_part.startswith(".")  # no leading dot
+                and not domain_part.endswith(".")    # no trailing dot
+                and not domain_part.startswith("-")  # no leading hyphen
+                and not domain_part.endswith("-")    # no trailing hyphen
+                and ".." not in domain_part          # no consecutive dots
+                and "--" not in domain_part          # no consecutive hyphens
+                and "++" not in domain_part           # no consecutive plus
+                and all(c.isalnum() or c in ".-" for c in domain_part)  # allowed chars only
                 
             ):
                 refined_list.append(email)
 
-    return
+    return refined_list
 
 def validate_gmail_address(email:str)-> bool: 
     pass 

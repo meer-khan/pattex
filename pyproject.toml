@@ -7,14 +7,16 @@ module-root = ""
 
 [project]
 name = "pattex"
-version = "0.2.0"
+version = "0.2.1"
 readme = "README.md"
-dependencies = []
+dependencies = [
+    "pytest==9.0.3",
+]
 authors = [
   { name="Shahmeer Khan", email="shahmirkhan519@gmail.com" },
 ]
 description = "Regex pattern matching and extraction library for Python."
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
@@ -28,5 +30,7 @@ Issues = "https://github.com/meer-khan/pattex/issues"
 
 [dependency-groups]
 dev = [
+    "build>=1.4.3",
     "icecream==2.2.0",
+    "twine>=6.2.0",
 ]

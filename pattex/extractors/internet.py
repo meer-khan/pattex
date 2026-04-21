@@ -23,6 +23,12 @@ from pattex.constants.regexes import (
     _SLUG,
     _EMAIL_RFC5322,
     _GMAIL_BASE,
+    _YAHOO_BASE,
+    _OUTLOOK_BASE,
+    _ICLOUD_BASE,
+    _ZOHO_BASE,
+    _PROTON_BASE,
+    _CONSECUTIVE_SPECIAL
 )
 from pattex.constants.extractor_constants import EMAIL_PROVIDERS
 from pattex._utils._utils import _length_check
@@ -41,7 +47,7 @@ from pattex._utils._utils import _length_check
 # Create specific functions (get_valid_gmail_addresses, get_valid_yahoo_addresses,
 # get_valid_outlook_addresses, get_valid_icloud_addresses) that extract and validate email addresses.
 
-
+# TODO: Set these rules as constants in some file and use these where needed
 def extract_emails(
     text: str, mode: Literal["practical", "rfc5322"] = "practical"
 ) -> list[str]:
@@ -216,33 +222,6 @@ def validate_icloud_address(email: str) -> bool:
     pass
 
 
-def extract_urls(text: str) -> list[str]:
-    """Extract all HTTP/HTTPS URLs from text."""
-    return _URL.findall(text)
-
-
-def extract_domains(text: str) -> list[str]:
-    """
-    Extract all domain names from text.
-    Note: this is intentionally broad — it will also match
-    domains inside URLs and emails. Filter downstream if needed.
-    """
-    return _DOMAIN.findall(text)
-
-
-def extract_ipv4_addresses(text: str) -> list[str]:
-    """Extract all valid IPv4 addresses from text."""
-    return _IPV4.findall(text)
-
-
-def extract_ipv6_addresses(text: str) -> list[str]:
-    """Extract all IPv6 addresses from text."""
-    return _IPV6.findall(text)
-
-
-def extract_slugs(text: str) -> list[str]:
-    """Extract URL slugs (e.g. 'my-blog-post') from text."""
-    return _SLUG.findall(text)
 
 
 
@@ -293,3 +272,237 @@ def _extract_gmail_emails(text: str) -> list[str]:
         refined_list.append(email.lower())  # normalize to lowercase
 
     return refined_list
+
+
+
+
+
+
+
+
+
+def _has_consecutive_specials(local: str) -> bool:
+    return bool(_CONSECUTIVE_SPECIAL.search(local))
+
+
+# ── extractors ───────────────────────────────────────────────────────────────
+
+def _extract_outlook_emails(text: str) -> list[str]:
+    """
+    Extract Outlook / Hotmail / Live / MSN addresses from text.
+
+    Outlook rules applied:
+        Local part:
+            - 1 to 64 characters
+            - Only letters, numbers, dots, underscores, and hyphens allowed
+            - Cannot start or end with a dot or hyphen
+            - No consecutive dots (..) or consecutive hyphens (--)
+        Domain:
+            - Must be @outlook.com, @hotmail.com, @live.com, or @msn.com
+    """
+    raw_list: list[str] = _OUTLOOK_BASE.findall(text)
+    refined_list: list[str] = []
+
+    for email in raw_list:
+        local, _ = email.split("@", 1)
+
+        if not (1 <= len(local) <= 64):
+            continue
+
+        if not all(c.isalnum() or c in "._-" for c in local):
+            continue
+
+        if local[0] in ".-" or local[-1] in ".-":
+            continue
+
+        if ".." in local or "--" in local:
+            continue
+
+        refined_list.append(email.lower())
+
+    return refined_list
+
+
+def _extract_icloud_emails(text: str) -> list[str]:
+    """
+    Extract iCloud / Me / Mac addresses from text.
+
+    iCloud rules applied:
+        Local part:
+            - 3 to 20 characters
+            - Only letters, numbers, dots, underscores, and hyphens allowed
+            - Cannot start or end with a dot, underscore, or hyphen
+            - No two special characters consecutive (e.g. ._, -., __)
+        Domain:
+            - Must be @icloud.com, @me.com, or @mac.com
+    """
+    raw_list: list[str] = _ICLOUD_BASE.findall(text)
+    refined_list: list[str] = []
+
+    for email in raw_list:
+        local, _ = email.split("@", 1)
+
+        if not (3 <= len(local) <= 20):
+            continue
+
+        if not all(c.isalnum() or c in "._-" for c in local):
+            continue
+
+        if local[0] in "._-" or local[-1] in "._-":
+            continue
+
+        if _has_consecutive_specials(local):
+            continue
+
+        refined_list.append(email.lower())
+
+    return refined_list
+
+
+def _extract_yahoo_emails(text: str) -> list[str]:
+    """
+    Extract Yahoo addresses from text (global + regional domains).
+
+    Yahoo rules applied:
+        Local part:
+            - 4 to 32 characters
+            - Only letters, numbers, dots, underscores, and hyphens allowed
+            - Must start with a letter (a-z)
+            - Cannot end with a dot, underscore, or hyphen
+            - No two special characters consecutive
+        Domain:
+            - Must be a recognised Yahoo domain:
+              yahoo.com, yahoo.co.uk, yahoo.co.in, yahoo.com.au,
+              yahoo.ca, yahoo.de, yahoo.fr, yahoo.es, yahoo.it,
+              yahoo.com.br, yahoo.com.mx, yahoo.com.ar
+    """
+    raw_list: list[str] = _YAHOO_BASE.findall(text)
+    refined_list: list[str] = []
+
+    for email in raw_list:
+        local, _ = email.split("@", 1)
+
+        if not (4 <= len(local) <= 32):
+            continue
+
+        if not all(c.isalnum() or c in "._-" for c in local):
+            continue
+
+        if not local[0].isalpha():
+            continue
+
+        if local[-1] in "._-":
+            continue
+
+        if _has_consecutive_specials(local):
+            continue
+
+        refined_list.append(email.lower())
+
+    return refined_list
+
+
+def _extract_zoho_emails(text: str) -> list[str]:
+    """
+    Extract Zoho / ZohoMail addresses from text.
+
+    Zoho rules applied:
+        Local part:
+            - 1 to 60 characters
+            - Only letters, numbers, dots, underscores, hyphens, and plus signs allowed
+            - Cannot start or end with a dot, underscore, hyphen, or plus
+            - No consecutive dots
+        Domain:
+            - Must be @zoho.com or @zohomail.com
+    """
+    raw_list: list[str] = _ZOHO_BASE.findall(text)
+    refined_list: list[str] = []
+
+    for email in raw_list:
+        local, _ = email.split("@", 1)
+
+        if not (1 <= len(local) <= 60):
+            continue
+
+        if not all(c.isalnum() or c in "._-+" for c in local):
+            continue
+
+        if local[0] in "._-+" or local[-1] in "._-+":
+            continue
+
+        if ".." in local:
+            continue
+
+        refined_list.append(email.lower())
+
+    return refined_list
+
+
+def _extract_proton_emails(text: str) -> list[str]:
+    """
+    Extract Proton / ProtonMail / PM addresses from text.
+
+    Proton rules applied:
+        Local part:
+            - 1 to 40 characters
+            - Only letters, numbers, dots, underscores, and hyphens allowed
+            - Cannot start or end with a dot, underscore, or hyphen
+            - No consecutive dots
+        Domain:
+            - Must be @proton.me, @protonmail.com, or @pm.me
+    """
+    raw_list: list[str] = _PROTON_BASE.findall(text)
+    refined_list: list[str] = []
+
+    for email in raw_list:
+        local, _ = email.split("@", 1)
+
+        if not (1 <= len(local) <= 40):
+            continue
+
+        if not all(c.isalnum() or c in "._-" for c in local):
+            continue
+
+        if local[0] in "._-" or local[-1] in "._-":
+            continue
+
+        if ".." in local:
+            continue
+
+        refined_list.append(email.lower())
+
+    return refined_list
+
+
+
+
+
+
+
+def extract_urls(text: str) -> list[str]:
+    """Extract all HTTP/HTTPS URLs from text."""
+    return _URL.findall(text)
+
+
+def extract_domains(text: str) -> list[str]:
+    """
+    Extract all domain names from text.
+    Note: this is intentionally broad — it will also match
+    domains inside URLs and emails. Filter downstream if needed.
+    """
+    return _DOMAIN.findall(text)
+
+
+def extract_ipv4_addresses(text: str) -> list[str]:
+    """Extract all valid IPv4 addresses from text."""
+    return _IPV4.findall(text)
+
+
+def extract_ipv6_addresses(text: str) -> list[str]:
+    """Extract all IPv6 addresses from text."""
+    return _IPV6.findall(text)
+
+
+def extract_slugs(text: str) -> list[str]:
+    """Extract URL slugs (e.g. 'my-blog-post') from text."""
+    return _SLUG.findall(text)

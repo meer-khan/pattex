@@ -158,14 +158,134 @@ _GMAIL_BASE = re.compile(
         r"[a-zA-Z0-9.]+@(?:gmail|googlemail)\.com",
         re.IGNORECASE,
     )
-# --------------------------------------------------
-_URL = re.compile(
-    r"https?://"                        # scheme
-    r"(?:[a-zA-Z0-9\-]+\.)+[a-zA-Z]{2,}"  # host
-    r"(?::\d{1,5})?"                    # optional port
-    r"(?:/[^\s]*)?",                    # optional path/query
+
+
+_OUTLOOK_BASE = re.compile(
+    r"[a-zA-Z0-9._-]+@(?:outlook|hotmail|live|msn)\.com",
     re.IGNORECASE,
 )
+
+_ICLOUD_BASE = re.compile(
+    r"[a-zA-Z0-9._-]+@(?:icloud|me|mac)\.com",
+    re.IGNORECASE,
+)
+
+_YAHOO_BASE = re.compile(
+    r"[a-zA-Z0-9._-]+"
+    r"@yahoo\.(?:com|co\.uk|co\.in|com\.au|ca|de|fr|es|it|com\.br|com\.mx|com\.ar)",
+    re.IGNORECASE,
+)
+
+_ZOHO_BASE = re.compile(
+    r"[a-zA-Z0-9._+\-]+@(?:zoho|zohomail)\.com",
+    re.IGNORECASE,
+)
+
+_PROTON_BASE = re.compile(
+    r"[a-zA-Z0-9._-]+@(?:proton\.me|protonmail\.com|pm\.me)",
+    re.IGNORECASE,
+)
+
+# --------------------------------------------------
+# _URL = re.compile(
+#     r"https?://"                        # scheme
+#     r"(?:[a-zA-Z0-9\-]+\.)+[a-zA-Z]{2,}"  # host
+#     r"(?::\d{1,5})?"                    # optional port
+#     r"(?:/[^\s]*)?",                    # optional path/query
+#     re.IGNORECASE,
+# )
+
+
+
+ 
+# ── URL shared sub-patterns ───────────────────────────────────────────────────
+ 
+_USERINFO = (
+    r"(?:[a-zA-Z0-9._~!$&'()*+,;=%-]+"
+    r"(?::[a-zA-Z0-9._~!$&'()*+,;=:%-]*)?)@"
+)
+_IPV4 = (
+    r"(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}"
+    r"(?:25[0-5]|2[0-4]\d|[01]?\d\d?)"
+)
+_IPV6    = r"\[(?:[0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}\]"
+_DOMAIN  = r"(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}"
+_PORT    = r"(?::\d{1,5})?"
+ 
+# Tail: optional path, then optional query+fragment captured together.
+_TAIL = (
+    r"(?:"
+    r"/[^\s\"'<>()\[\]{}|\\^]*"
+    r"(?:[?#][^\s\"'<>()\[\]{}|\\^]*)?"
+    r")?"
+)
+ 
+# ── Schemed URL (strict mode) ─────────────────────────────────────────────────
+ 
+_URL_STRICT_BASE = re.compile(
+    r"(?:https?|ftps?|sftp|wss?)"
+    r"://"
+    r"(?:" + _USERINFO + r")?"
+    r"(?:" + _IPV6 + r"|" + _IPV4 + r"|" + _DOMAIN + r"|localhost)"
+    + _PORT + _TAIL,
+    re.IGNORECASE,
+)
+ 
+# ── Protocol-relative  //host/path ───────────────────────────────────────────
+ 
+_URL_PROTOCOL_RELATIVE = re.compile(
+    r"//"
+    r"(?:" + _DOMAIN + r"|" + _IPV4 + r"|localhost)"
+    + _PORT + _TAIL,
+    re.IGNORECASE,
+)
+ 
+# ── Bare domain (permissive) ──────────────────────────────────────────────────
+ 
+_URL_BARE_DOMAIN = re.compile(
+    r"(?<![/@:\w.])"
+    r"(?:www\.)?"
+    r"(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}"
+    + _PORT + _TAIL,
+    re.IGNORECASE,
+)
+ 
+# ── Bare IPv4 (permissive) ────────────────────────────────────────────────────
+ 
+_URL_BARE_IP = re.compile(
+    r"(?<![/@:\w.])"
+    + _IPV4
+    + _PORT + _TAIL,
+    re.IGNORECASE,
+)
+ 
+# ── Localhost ─────────────────────────────────────────────────────────────────
+ 
+_URL_LOCALHOST = re.compile(
+    r"(?<!\w)localhost" + _PORT + _TAIL,
+    re.IGNORECASE,
+)
+ 
+# ── Trailing noise ────────────────────────────────────────────────────────────
+ 
+_URL_TRAILING_NOISE = re.compile(r"[.,!?;:'\")>\]]+$")
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 _DOMAIN = re.compile(
     r"\b(?:[a-zA-Z0-9\-]+\.)+[a-zA-Z]{2,}\b",
@@ -194,3 +314,13 @@ _IPV6 = re.compile(
 _SLUG = re.compile(
     r"\b[a-z0-9]+(?:-[a-z0-9]+)+\b"
 )
+
+
+
+
+# ── base regexes ────────────────────────────────────────────────────────────
+
+
+# ── helpers ──────────────────────────────────────────────────────────────────
+
+_CONSECUTIVE_SPECIAL = re.compile(r"[._-]{2,}")

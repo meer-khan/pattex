@@ -153,7 +153,20 @@ _EMAIL_RFC5322 = re.compile(
     re.VERBOSE,
 )
 
+# * Allowed characters in local part (part before @): 
+# small alphabets a-z
+# digits 0-9
+# capital alphabets A-Z
+# dots
 
+#* Not allowed characters in local part (part before @):
+# spaces
+# parentheses
+# backslash
+# consecutive dots
+# start with dot 
+# end with dot
+# special characters !#$%^&*()+=,;:'"?><[]{}|~`
 _GMAIL_BASE = re.compile(
         r"[a-zA-Z0-9.]+@(?:gmail|googlemail)\.com",
         re.IGNORECASE,

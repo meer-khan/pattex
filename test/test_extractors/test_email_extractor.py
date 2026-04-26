@@ -1,4 +1,4 @@
-from pattex.extractors.email_extraction import extract_emails
+from pattex.extractors.email_extractor import extract_emails
 
 
 # ─────────────────────────────────────────────────────────────────────

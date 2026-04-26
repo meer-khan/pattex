@@ -7,7 +7,7 @@ Tests for URL extraction functions in pattex.extractors.url_extractor.
 
 Run with: pytest test/test_extractors/test_urls_extractor.py -v
 """
-from pattex.extractors.urls_extraction import (
+from pattex.extractors.url_extractor import (
     extract_urls,
     extract_urls_by_scheme,
     extract_urls_by_domain,

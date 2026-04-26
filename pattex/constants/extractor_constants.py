@@ -1,7 +1,19 @@
 from typing import Literal
+from enum import Enum
 
+EMAIL_MODES = Literal["practical", "rfc5322"]
+# TODO: Merge both of them in a way that we can have both the benefits of type safety and ease of use.
+# e.g. write a function in EmailProvider class that returns list of literals of all providers, 
+# and then use that function to define the EMAIL_PROVIDERS literal.
 EMAIL_PROVIDERS = Literal["gmail", "yahoo", "outlook", "icloud", "zoho", "proton"]
 
+class EmailProvider(str, Enum): 
+    GMAIL = "gmail"
+    YAHOO = "yahoo"
+    OUTLOOK = "outlook"
+    ICLOUD = "icloud"
+    ZOHO = "zoho"
+    PROTON = "proton"
 
 
 # ── Known URL schemes ────────────────────────────────────────────────────────

@@ -7,7 +7,7 @@ module-root = ""
 
 [project]
 name = "pattex"
-version = "0.2.1"
+version = "0.3.0"
 readme = "README.md"
 dependencies = [
     "pytest==9.0.3",

@@ -82,17 +82,17 @@ def extract_emails(
     >>> extract_emails('send to "john doe"@example.com', mode="rfc5322")
     ['"john doe"@example.com']
     """
-    raw_list: list[str] = _EMAIL.findall(text)
-
+    
     if mode == "rfc5322":
         return _EMAIL_RFC5322.findall(text)
-
-    refined_list = []
-    if mode == "practical":
-        # email should not start and end with dot
-        # emails's local part should not have special characters other than dot, underscore, hyphen and plus
-        # email's domain part should not have special characters other than dot and hyphen
-        # email should not have consecutive dots in local part and domain part
+    
+    elif mode == "practical":
+        raw_list: list[str] = _EMAIL.findall(text)
+        refined_list = []
+            # email should not start and end with dot
+            # emails's local part should not have special characters other than dot, underscore, hyphen and plus
+            # email's domain part should not have special characters other than dot and hyphen
+            # email should not have consecutive dots in local part and domain part
 
         for email in raw_list:
             local_part, domain_part = email.split("@", maxsplit=1)
@@ -110,6 +110,10 @@ def extract_emails(
                 continue
 
             # tld length check
+            # explain it: we split the domain part by the last dot to get the top-level domain (TLD).
+            # Then, we check if the TLD is at least 2 characters long.
+            # This is because valid TLDs must be at least 2 characters (e.g. .com, .org, .net). 
+            # If the TLD is less than 2 characters, we skip this email as invalid.
             tld = domain_part.rsplit(".", 1)[-1]
             if len(tld) < 2:
                 continue
@@ -138,6 +142,8 @@ def extract_emails(
                 )  # allowed chars only
             ):
                 refined_list.append(email)
+        else: 
+            return []
 
     return refined_list
 
@@ -184,6 +190,8 @@ def extract_emails_by_provider(text: str, provider: EmailProvider | EMAIL_PROVID
 
     return []
 
+# TODO: Add check not to start with any special character in the local part of the email address, 
+# as per the rules of most providers.
 
 def extract_gmail_emails(text: str, normalize: bool = False) -> list[str]:
     """
@@ -305,7 +313,10 @@ def extract_outlook_emails(text: str) -> list[str]:
         if not all(c.isalnum() or c in "._-" for c in local):
             continue
 
-        if local[0] in ".-" or local[-1] in ".-":
+        if local.startswith(".") or local.endswith("."):
+            continue
+
+        if local.startswith("-") or local.endswith("-"):
             continue
 
         if ".." in local or "--" in local:
@@ -341,6 +352,7 @@ def extract_icloud_emails(text: str) -> list[str]:
         if not all(c.isalnum() or c in "._-" for c in local):
             continue
 
+        # no leading or trailing dot, underscore, or hyphen
         if local[0] in "._-" or local[-1] in "._-":
             continue
 
@@ -380,10 +392,12 @@ def extract_yahoo_emails(text: str) -> list[str]:
 
         if not all(c.isalnum() or c in "._-" for c in local):
             continue
-
+        
+        # must start with a letter
         if not local[0].isalpha():
             continue
 
+        # no trailing dot, underscore, or hyphen    
         if local[-1] in "._-":
             continue
 
@@ -417,12 +431,15 @@ def extract_zoho_emails(text: str) -> list[str]:
         if not (1 <= len(local) <= 60):
             continue
 
+        # only letters, numbers, dots, underscores, hyphens, and plus signs allowed in local part
         if not all(c.isalnum() or c in "._-+" for c in local):
             continue
 
+        # no leading or trailing dot, underscore, hyphen, or plus
         if local[0] in "._-+" or local[-1] in "._-+":
             continue
-
+        
+        # no consecutive dots
         if ".." in local:
             continue
 
@@ -452,10 +469,12 @@ def extract_proton_emails(text: str) -> list[str]:
 
         if not (1 <= len(local) <= 40):
             continue
-
+        
+        # only letters, numbers, dots, underscores, and hyphens allowed
         if not all(c.isalnum() or c in "._-" for c in local):
             continue
-
+        
+        # no leading or trailing dot, underscore, or hyphen
         if local[0] in "._-" or local[-1] in "._-":
             continue
 

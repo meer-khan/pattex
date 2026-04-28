@@ -7,18 +7,6 @@ _EMAIL = re.compile(
 )
 
 _EMAIL_RFC5322 = re.compile(
-    r"""(?:[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+"""   # unquoted local part
-    r"""(?:\.[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+)*""" # dots in local part
-    r"""|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]"""  # quoted string
-    r"""|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")"""    # escaped chars in quotes
-    r"""@"""
-    r"""(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?"""  # domain label
-    r"""(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*)"""  # more labels
-    r"""|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}"""  # ip literal
-    r"""(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\])""",          # last octet
-    re.VERBOSE,
-)
-_EMAIL_RFC5322 = re.compile(
     # ================================================================
     # LOCAL PART (before the @)
     # The local part can be either:

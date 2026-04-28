@@ -173,41 +173,232 @@ _GMAIL_BASE = re.compile(
     )
 
 
+# Outlook / Hotmail / Live personal account email rules
+#
+# Supported domains commonly include:
+# @outlook.com
+# @hotmail.com
+# @live.com
+# @msn.com
+#
+# =========================================================
+# Allowed characters in local part (part before @)
+# =========================================================
+#
+# small alphabets a-z
+# capital alphabets A-Z
+# digits 0-9
+# dots (.)
+# underscores (_)
+# hyphens (-)
+#
+# In many practical cases, plus (+) addressing is also supported
+# for receiving mail (example: john+work@outlook.com)
+#
+#
+# =========================================================
+# Not allowed characters in local part (part before @)
+# =========================================================
+#
+# spaces
+# parentheses ()<>[]{},;:'"\/|`~!#$%^&*=?
+
+# =========================================================
+# Structural restrictions in local part
+# =========================================================
+#
+# cannot start with dot (.)
+# cannot end with dot (.)
+# cannot have consecutive dots (..)
 _OUTLOOK_BASE = re.compile(
     r"[a-zA-Z0-9._-]+@(?:outlook|hotmail|live|msn)\.com",
     re.IGNORECASE,
 )
 
+
+# Supported domains commonly include:
+# @icloud.com
+# @me.com
+# @mac.com
+#
+# Note:
+# @me.com and @mac.com are older Apple domains.
+# Existing users may still use them.
+#
+# =========================================================
+# Allowed characters in local part (part before @)
+# =========================================================
+#
+# small alphabets a-z
+# capital alphabets A-Z
+# digits 0-9
+# dots (.)
+# underscores (_)
+# hyphens (-)
+# plus (+) addressing is commonly supported for receiving mail
+# example:
+# john+work@icloud.com
+#
+#
+# =========================================================
+# Not allowed characters in local part (part before @)
+# =========================================================
+#
+# spaces , ()<>[]{},;:'"\/|`~!#$%^&*=?
+
+# =========================================================
+# Structural restrictions in local part
+# =========================================================
+#
+# cannot start with dot (.)
+# cannot end with dot (.)
+# cannot have consecutive dots (..)
 _ICLOUD_BASE = re.compile(
     r"[a-zA-Z0-9._-]+@(?:icloud|me|mac)\.com",
     re.IGNORECASE,
 )
 
+
+# =========================================================
+# Supported domains commonly include:
+# @yahoo.com
+# @yahoo.co.uk
+# @yahoo.ca
+# @yahoo.in
+# @ymail.com
+# @rocketmail.com
+#
+# Note:
+# @rocketmail.com is an older Yahoo domain.
+# Existing users may still use it.
+#
+# =========================================================
+# Allowed characters in local part (part before @)
+# =========================================================
+#
+# small alphabets a-z
+# capital alphabets A-Z
+# digits 0-9
+# dots (.)
+# underscores (_)
+#
+# hyphens (-) may be allowed depending on account type
+# and legacy account behavior, but are not always reliable
+#
+# plus (+) addressing may work for aliases/filters,
+# but should not be assumed for base account creation
+#
+#
+# =========================================================
+# Not allowed characters in local part (part before @)
+# =========================================================
+#
+# spaces ()<>[]{},;:'"\/|`~!#$%^&*=?
+# =========================================================
+# Structural restrictions in local part
+# =========================================================
+#
+# cannot start with dot (.)
+# cannot end with dot (.)
+# cannot have consecutive dots (..)
 _YAHOO_BASE = re.compile(
     r"[a-zA-Z0-9._-]+"
     r"@yahoo\.(?:com|co\.uk|co\.in|com\.au|ca|de|fr|es|it|com\.br|com\.mx|com\.ar)",
     re.IGNORECASE,
 )
 
+
+# =========================================================
+# Supported domains commonly include:
+# @zohomail.com
+# custom domains via Zoho Mail hosting
+#
+# Note:
+# Zoho is commonly used for both personal and business
+# email accounts, especially with custom domains.
+#
+# =========================================================
+# Allowed characters in local part (part before @)
+# =========================================================
+#
+# small alphabets a-z
+# capital alphabets A-Z
+# digits 0-9
+# dots (.)
+# underscores (_)
+# hyphens (-)
+#
+# plus (+) addressing is commonly supported
+# example:
+# john+work@zohomail.com
+#
+#
+# =========================================================
+# Not allowed characters in local part (part before @)
+# =========================================================
+#
+# spaces ()<>[]{},;:'"\/|`~!#$%^&*=?
+
+# =========================================================
+# Structural restrictions in local part
+# =========================================================
+#
+# cannot start with dot (.)
+# cannot end with dot (.)
+# cannot have consecutive dots (..)
 _ZOHO_BASE = re.compile(
     r"[a-zA-Z0-9._+\-]+@(?:zoho|zohomail)\.com",
     re.IGNORECASE,
 )
 
+
+
+# =========================================================
+# Proton Mail personal account email rules
+# =========================================================
+#
+# Supported domains commonly include:
+# @proton.me
+# @protonmail.com
+# @pm.me
+#
+# Note:
+# @pm.me is a short alias domain provided by Proton
+#
+#
+# =========================================================
+# Allowed characters in local part (part before @)
+# =========================================================
+#
+# small alphabets a-z
+# capital alphabets A-Z
+# digits 0-9
+# dots (.)
+# underscores (_)
+# hyphens (-)
+#
+# plus (+) addressing is commonly supported
+# example:
+# john+work@proton.me
+#
+#
+# =========================================================
+# Not allowed characters in local part (part before @)
+# =========================================================
+#
+# spaces ()<>[]{},;:'"\/|`~!#$%^&*=?
+
+# =========================================================
+# Structural restrictions in local part
+# =========================================================
+#
+# cannot start with dot (.)
+# cannot end with dot (.)
+# cannot have consecutive dots (..)
 _PROTON_BASE = re.compile(
     r"[a-zA-Z0-9._-]+@(?:proton\.me|protonmail\.com|pm\.me)",
     re.IGNORECASE,
 )
-
-# --------------------------------------------------
-# _URL = re.compile(
-#     r"https?://"                        # scheme
-#     r"(?:[a-zA-Z0-9\-]+\.)+[a-zA-Z]{2,}"  # host
-#     r"(?::\d{1,5})?"                    # optional port
-#     r"(?:/[^\s]*)?",                    # optional path/query
-#     re.IGNORECASE,
-# )
-
 
 
  

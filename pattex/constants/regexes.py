@@ -413,15 +413,37 @@ _TAIL = (
 )
  
 # ── Schemed URL (strict mode) ─────────────────────────────────────────────────
- 
 _URL_STRICT_BASE = re.compile(
-    r"(?:https?|ftps?|sftp|wss?)"
-    r"://"
-    r"(?:" + _USERINFO + r")?"
-    r"(?:" + _IPV6 + r"|" + _IPV4 + r"|" + _DOMAIN + r"|localhost)"
-    + _PORT + _TAIL,
-    re.IGNORECASE,
+    r"""
+    (?:https?|ftps?|sftp|wss?)   # scheme
+    ://
+    (?:                          # optional userinfo  user:pass@
+        [a-zA-Z0-9._~!$&'()*+,;=%-]+
+        (?::[a-zA-Z0-9._~!$&'()*+,;=:%-]*)?
+    @)?
+    (?:                          # host — one of:
+        \[(?:[0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}\]  # IPv6  [::1]
+        |(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}        # IPv4  192.168.1.1
+         (?:25[0-5]|2[0-4]\d|[01]?\d\d?)
+        |(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}  # domain
+        |localhost
+    )
+    (?::\d{1,5})?                # optional port
+    (?:                          # optional tail
+        /[^\s"'<>()\[\]{}|\\^]*
+        (?:[?#][^\s"'<>()\[\]{}|\\^]*)?
+    )?
+    """,
+    re.IGNORECASE | re.VERBOSE,
 )
+# _URL_STRICT_BASE = re.compile(
+#     r"(?:https?|ftps?|sftp|wss?)"
+#     r"://"
+#     r"(?:" + _USERINFO + r")?"
+#     r"(?:" + _IPV6 + r"|" + _IPV4 + r"|" + _DOMAIN + r"|localhost)"
+#     + _PORT + _TAIL,
+#     re.IGNORECASE,
+# )
  
 # ── Protocol-relative  //host/path ───────────────────────────────────────────
  

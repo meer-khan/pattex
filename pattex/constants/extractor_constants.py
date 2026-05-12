@@ -2,6 +2,8 @@ from typing import Literal
 from enum import Enum
 
 EMAIL_MODES = Literal["practical", "rfc5322"]
+URL_MODES = Literal["strict", "permissive"]
+URL_SCHEMES = Literal["http", "https", "ftp", "ftps", "sftp", "ws", "wss"]
 # TODO: Merge both of them in a way that we can have both the benefits of type safety and ease of use.
 # e.g. write a function in EmailProvider class that returns list of literals of all providers, 
 # and then use that function to define the EMAIL_PROVIDERS literal.
@@ -20,12 +22,9 @@ class EmailProvider(str, Enum):
  
 STRICT_SCHEMES = frozenset({"http", "https", "ftp", "ftps", "sftp", "ws", "wss"})
  
-SCHEME_PATTERN = r"(?:https?|ftps?|sftp|wss?)"
- 
 # ── Curated common TLDs (~200 most common) ───────────────────────────────────
 # Used in permissive mode to validate bare-domain URLs (no scheme).
 # Not exhaustive — intentionally curated to balance recall vs false positives.
- 
 COMMON_TLDS = frozenset({
     # Generic
     "com", "org", "net", "edu", "gov", "mil", "int",

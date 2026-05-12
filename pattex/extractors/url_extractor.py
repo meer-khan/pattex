@@ -9,7 +9,7 @@ from pattex.constants.regexes import (
     
 )
 from pattex._utils._utils import  host_from_url, normalize_url_host, is_valid_port, strip_url_noise, is_known_tld
-
+from pattex.constants.extractor_constants import URL_MODES, URL_SCHEMES
 # ─────────────────────────────────────────────────────────────────────────────
 # URL EXTRACTORS
 # ─────────────────────────────────────────────────────────────────────────────
@@ -17,55 +17,56 @@ from pattex._utils._utils import  host_from_url, normalize_url_host, is_valid_po
  
 def extract_urls(
     text: str,
-    mode: Literal["strict", "permissive"] = "strict",
+    mode: URL_MODES = "strict",
     include_localhost: bool = False,
 ) -> list[str]:
     """
     Extract URLs from text.
- 
+
     Args:
         text:              Input string to search.
         mode:              Extraction strictness.
- 
+
             - ``"strict"`` *(default)* — only schemed URLs
               (``http``, ``https``, ``ftp``, ``ftps``, ``sftp``,
               ``ws``, ``wss``). Port must be 1–65535 if present.
               Highest precision, lowest false-positive rate.
- 
+
             - ``"permissive"`` — additionally matches:
                 - Protocol-relative URLs starting with ``//``
                 - Bare domain URLs (no scheme) whose TLD is in the
                   curated ``COMMON_TLDS`` list
                 - Bare IPv4 addresses with an optional path/query
                 - ``localhost`` with an optional port and path
- 
+
         include_localhost: When ``True``, ``localhost`` URLs are included
                            even in ``"strict"`` mode. Defaults to ``False``.
- 
+
     Returns:
         Deduplicated list of URL strings, with scheme and host lowercased.
         Trailing punctuation and surrounding quotes are stripped.
         Order preserves first-occurrence order from left to right in text.
- 
+
     Rules applied to all modes:
         - Trailing noise stripped: ``. , ! ? ; : ' " ) > ]``
         - Surrounding quotes stripped
         - Port number validated: must be in range 1–65535
         - Duplicate URLs removed (case-insensitive on scheme+host)
         - Scheme and host normalised to lowercase
- 
+
     Additional rules for strict mode:
         - Scheme must be one of: http, https, ftp, ftps, sftp, ws, wss
- 
+
     Additional rules for permissive mode (on top of strict):
         - Protocol-relative (``//host``) URLs accepted
         - Bare domain URLs accepted if TLD is in COMMON_TLDS
         - Bare IPv4 URLs accepted
         - ``localhost`` accepted (with or without port)
     """
+
     seen: set[str] = set()
     results: list[str] = []
- 
+
     def _add(url: str) -> None:
         url = strip_url_noise(url)
         if not url:
@@ -77,53 +78,46 @@ def extract_urls(
         if key not in seen:
             seen.add(key)
             results.append(normalised)
- 
-    # ── strict: schemed URLs ──────────────────────────────────────────────────
+
+    def _is_inside_schemed_url(match_start: int) -> bool:
+        preceding = text[max(0, match_start - 10): match_start]
+        return "://" in preceding or preceding.endswith(":")
+
+    # ── strict: schemed URLs (always) ────────────────────────────────────────
     for match in _URL_STRICT_BASE.finditer(text):
         _add(match.group(0))
- 
-    # ── localhost (opt-in for strict; always on for permissive) ───────────────
+
+    # ── localhost ─────────────────────────────────────────────────────────────
     if include_localhost or mode == "permissive":
         for match in _URL_LOCALHOST.finditer(text):
-            raw = match.group(0)
-            # avoid double-counting localhost already caught by strict base
-            if not raw.startswith(("http://", "https://")):
-                _add(raw)
- 
+            if not _is_inside_schemed_url(match.start()):
+                _add(match.group(0))
+
+    # ── permissive-only patterns ──────────────────────────────────────────────
     if mode == "permissive":
-        # ── protocol-relative //host ──────────────────────────────────────────
+
         for match in _URL_PROTOCOL_RELATIVE.finditer(text):
-            raw = match.group(0)
-            _add(raw)
- 
-        # ── bare domain URLs ──────────────────────────────────────────────────
+            if not _is_inside_schemed_url(match.start()):
+                _add(match.group(0))
+
         for match in _URL_BARE_DOMAIN.finditer(text):
-            raw = match.group(0)
-            raw_clean = strip_url_noise(raw)
-            host = host_from_url(raw_clean)
-            if not is_known_tld(host):
-                continue
-            # skip if it's an email address fragment
             start = match.start()
             if start > 0 and text[start - 1] == "@":
-                continue
-            _add(raw)
- 
-        # ── bare IPv4 ─────────────────────────────────────────────────────────
+                continue  # skip email fragments
+            host = host_from_url(strip_url_noise(match.group(0)))
+            if is_known_tld(host):
+                _add(match.group(0))
+
         for match in _URL_BARE_IP.finditer(text):
-            raw = match.group(0)
-            # skip IPs that are already part of a schemed URL already captured
-            start = match.start()
-            if start >= 3 and text[start - 3: start] == "://":
-                continue
-            _add(raw)
- 
+            if not _is_inside_schemed_url(match.start()):
+                _add(match.group(0))
+
     return results
  
  
 def extract_urls_by_scheme(
     text: str,
-    scheme: Literal["http", "https", "ftp", "ftps", "sftp", "ws", "wss"],
+    scheme: URL_SCHEMES,
 ) -> list[str]:
     """
     Extract URLs that use a specific scheme.
@@ -175,7 +169,6 @@ def extract_urls_by_scheme(
             results.append(normalised)
  
     return results
- 
  
 def extract_urls_by_domain(
     text: str,

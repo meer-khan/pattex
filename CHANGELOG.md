@@ -1,12 +1,3 @@
-# pattex
-
-A Python library for extracting common patterns from text using regex — emails, URLs, phone numbers, IP addresses, and more.
-
-## Installation
-
-```bash
-pip install pattex
-```
 
 ## Changelog
 
@@ -30,13 +21,11 @@ pip install pattex
 
 * Fixed `extract_emails_by_provider` which was not dispatching to provider helper functions correctly — all six providers now route properly.
 
-
-
 ### v0.3.1 - 2026-05-13
 
 #### Fixed
 
-*  Zoho extractor: removed hyphen (**`-`**) and plus (**`+`**) from allowed local part
+* Zoho extractor: removed hyphen (**`-`**) and plus (**`+`**) from allowed local part
   characters — Zoho usernames only permit letters, numbers, dots, and
   underscores per official documentation
 * Zoho extractor: **`+`** is a subaddressing tag separator, not a valid account
@@ -59,11 +48,3 @@ pip install pattex
 #### Internal
 
 * General code cleanups across extractor modules
-
-## Status
-
-Currently under active development. Full documentation and usage examples coming soon.
-
-## License
-
-MIT

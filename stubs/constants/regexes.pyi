@@ -1,4 +1,4 @@
-from pattex.constants.regexes import _OUTLOOK_BASE, _ICLOUD_BASE, _ZOHO_BASE, _PROTON_BASE, _GMAIL_BASE, _YAHOO_BASE
+from pattex.constants.regexes import _OUTLOOK_BASE, _ICLOUD_BASE, _ZOHO_BASE, _PROTON_BASE, _GMAIL_BASE, _YAHOO_BASE, _URL_STRICT_BASE
 
 # Outlook / Hotmail / Live personal account email rules
 #
@@ -459,3 +459,61 @@ _ZOHO_BASE
 # practical validation > theoretical RFC completeness
 #
 _PROTON_BASE
+
+# SCHEME
+# (?:https?|ftps?|sftp|wss?)
+# What protocol is being used? Matches: http, https, ftp, ftps, sftp, ws, wss. 
+# The s? means the "s" is optional — so https? matches both http and https. 
+# The (?:...) is a non-capturing group — it groups the alternatives without creating a capture group.
+
+# SEPERATOR
+# ://
+# Literal characters. 
+# Every standard URL has :// between the scheme and the host. 
+# No regex magic here — it must appear exactly as written.
+
+# HOST ONE OF FOUR TYPES
+# (?:\[IPv6\] | IPv4 | domain | localhost)
+# What server are we connecting to? Four alternatives separated by |. 
+# Matched in order: IPv6, IPv4, domain name, or the literal word localhost. 
+# Only one needs to match.
+
+# IPV6
+# \[(?:[0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}\]
+# e.g. [::1] or [2001:db8::ff00]. Must be wrapped in square brackets [...]. 
+# Inside: hex groups separated by colons. {0,4} means 0–4 hex digits per group. 
+# {2,7} means 2 to 7 colon-separated groups — this allows compressed notation like ::.
+
+# IPV4
+# (?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)
+# e.g. 192.168.1.1. Four octets separated by dots. 
+# Each octet is validated to be 0–255: 25[0-5] = 250–255, 2[0-4]\d = 200–249, [01]?\d\d? = 0–199. 
+# The first three octets must be followed by a dot \., 
+# then the fourth octet has no trailing dot.
+
+# DOMAIN NAME
+# (?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}
+# e.g. api.example.com. One or more labels separated by dots, ending with a TLD. 
+# Each label: starts/ends with alphanumeric, middle can have hyphens, max 63 chars ({0,61} middle + 2 ends). 
+# The + after the label group means one or more labels. TLD must be at least 2 letters [a-zA-Z]{2,}.
+
+# Localhost
+# Literal string localhost. Matches exactly the word localhost — 
+# useful for local development URLs like http://localhost:3000.
+
+# PORT
+# (?::\d{1,5})?
+# e.g. :8080 or :443. The ? makes it optional. 
+# :\d{1,5} matches a colon followed by 1–5 digits. 
+# Note: the regex allows :99999 — 
+# the Python validation loop (is_valid_port) handles the 1–65535 range check separately.
+
+# Tail — path, query, fragment (optional)
+# (?:/[^\s"'<>()\[\]{}|\\^]*(?:[?#][^\s"'<>()\[\]{}|\\^]*)?)?
+# Everything after the host/port. The outer (?:...)? makes it optional. 
+# Structure: path starts with /, followed by any chars that are not whitespace or URL-breaking characters. 
+# Then optionally a query (?...) or fragment (#...) — 
+# both use the same character class. 
+# The excluded chars [^\s"'<>()...] prevent the regex from swallowing 
+# surrounding punctuation like closing parentheses or quotes.
+_URL_STRICT_BASE

@@ -190,8 +190,6 @@ def extract_emails_by_provider(text: str, provider: EmailProvider | EMAIL_PROVID
 
     return []
 
-# TODO: Add check not to start with any special character in the local part of the email address, 
-# as per the rules of most providers.
 
 def extract_gmail_emails(text: str, normalize: bool = False) -> list[str]:
     """
@@ -244,18 +242,23 @@ def extract_gmail_emails(text: str, normalize: bool = False) -> list[str]:
 
     # first pass — pull anything that looks like a gmail/googlemail address
 
+    # pull out anything that looks like a gmail address
+    # domain part can only have @gmail.com or @googlemail.com
+    # it also checks that local part cannot have have special characters
     raw_list: list[str] = _GMAIL_BASE.findall(text)
     refined_list: list[str] = []
     seen: set[str] = set()
 
     for email in raw_list:
+        # get local part and domain by splitting on @
         local_part, _ = email.split("@", 1)
 
         # length check
+        # for gmail length should not be more than 30 and less than 6
         if not (6 <= len(local_part) <= 30):
             continue
         
-        # no leading or trailing dot
+        # no leading or trailing dot in local part 
         if local_part.startswith(".") or local_part.endswith("."):
             continue
 
@@ -278,14 +281,6 @@ def extract_gmail_emails(text: str, normalize: bool = False) -> list[str]:
     return refined_list
 
 
-
-
-
-
-def _has_consecutive_specials(local: str) -> bool:
-    return bool(_CONSECUTIVE_SPECIAL.search(local))
-
-
 # ── extractors ───────────────────────────────────────────────────────────────
 
 def extract_outlook_emails(text: str) -> list[str]:
@@ -301,24 +296,32 @@ def extract_outlook_emails(text: str) -> list[str]:
         Domain:
             - Must be @outlook.com, @hotmail.com, @live.com, or @msn.com
     """
+    # domain part can have @outlook.com, @hotmail.com, @live.com, or @msn.com
     raw_list: list[str] = _OUTLOOK_BASE.findall(text)
     refined_list: list[str] = []
 
     for email in raw_list:
+        # get local part and domain by splitting on @
         local, _ = email.split("@", 1)
 
+        # length check - local part should not be more than 64 and less than 1
         if not (1 <= len(local) <= 64):
             continue
-
+        
+        # only letters, numbers, dots, underscores, and hyphens allowed
+        # outlook can have consecutive special characters listed below
         if not all(c.isalnum() or c in "._-" for c in local):
             continue
-
+        
+        # no leading or trailing dot or hyphen
         if local.startswith(".") or local.endswith("."):
             continue
-
+        
+        # local part cannot start or end with a hyphen
         if local.startswith("-") or local.endswith("-"):
             continue
-
+        
+        # no consecutive dots or consecutive hyphens
         if ".." in local or "--" in local:
             continue
 
@@ -326,6 +329,30 @@ def extract_outlook_emails(text: str) -> list[str]:
 
     return refined_list
 
+
+def _has_consecutive_specials(local: str) -> bool:
+    """
+    Return ``True`` if the local part contains consecutive special characters.
+
+    Consecutive special characters are two or more of ``.``, ``_``, or ``-``
+    appearing next to each other (e.g. ``john..doe``, ``john__doe``, ``john.-doe``).
+    Mixed combinations are also caught (e.g. ``._`` or ``-.``).
+
+    Args:
+        local: The local part of an email address (everything before ``@``).
+
+    Returns:
+        ``True`` if consecutive specials are found, ``False`` otherwise.
+
+    Examples:
+        >>> _has_consecutive_specials("john..doe")
+        True
+        >>> _has_consecutive_specials("john._doe")
+        True
+        >>> _has_consecutive_specials("john.doe")
+        False
+    """
+    return bool(_CONSECUTIVE_SPECIAL.search(local))
 
 def extract_icloud_emails(text: str) -> list[str]:
     """
@@ -340,22 +367,30 @@ def extract_icloud_emails(text: str) -> list[str]:
         Domain:
             - Must be @icloud.com, @me.com, or @mac.com
     """
+    # domain part can have @icloud.com, @me.com, or @mac.com
     raw_list: list[str] = _ICLOUD_BASE.findall(text)
     refined_list: list[str] = []
 
     for email in raw_list:
+        # get local part and domain by splitting on @
         local, _ = email.split("@", 1)
 
+        # length check - local part should not be more than 20 and less than 3
         if not (3 <= len(local) <= 20):
             continue
 
+        # only letters, numbers, dots, underscores, and hyphens allowed
         if not all(c.isalnum() or c in "._-" for c in local):
             continue
 
         # no leading or trailing dot, underscore, or hyphen
         if local[0] in "._-" or local[-1] in "._-":
             continue
-
+        # icloud can have hyphens, dots, and underscores but not consecutive
+        # and this check is applied by _has_consecutive_specials
+        # this function is not being used in the outlook extractor because outlook
+        # doesnot can have hyphens, dots, and underscores consecutively
+        # and in the gmail hyphens, dots, and underscores are not allowed
         if _has_consecutive_specials(local):
             continue
 
@@ -385,11 +420,14 @@ def extract_yahoo_emails(text: str) -> list[str]:
     refined_list: list[str] = []
 
     for email in raw_list:
+        # get local part and domain by splitting on @
         local, _ = email.split("@", 1)
 
+        # length check - local part should not be more than 32 and less than 4
         if not (4 <= len(local) <= 32):
             continue
-
+        
+        # only letters, numbers, dots, underscores, and hyphens allowed
         if not all(c.isalnum() or c in "._-" for c in local):
             continue
         
@@ -411,34 +449,35 @@ def extract_yahoo_emails(text: str) -> list[str]:
 
 def extract_zoho_emails(text: str) -> list[str]:
     """
-    Extract Zoho / ZohoMail addresses from text.
-
     Zoho rules applied:
         Local part:
             - 1 to 60 characters
-            - Only letters, numbers, dots, underscores, hyphens, and plus signs allowed
-            - Cannot start or end with a dot, underscore, hyphen, or plus
+            - Only letters, numbers, dots, and underscores allowed
+            - Cannot start or end with a dot or underscore
             - No consecutive dots
         Domain:
             - Must be @zoho.com or @zohomail.com
+
     """
     raw_list: list[str] = _ZOHO_BASE.findall(text)
     refined_list: list[str] = []
 
     for email in raw_list:
+        # get local part and domain by splitting on @
         local, _ = email.split("@", 1)
 
+        # length check - local part should not be more than 60 and less than 1
         if not (1 <= len(local) <= 60):
             continue
 
-        # only letters, numbers, dots, underscores, hyphens, and plus signs allowed in local part
-        if not all(c.isalnum() or c in "._-+" for c in local):
+        # only letters, numbers, dots, and underscores allowed
+        if not all(c.isalnum() or c in "._" for c in local):
             continue
 
-        # no leading or trailing dot, underscore, hyphen, or plus
-        if local[0] in "._-+" or local[-1] in "._-+":
+        # no leading or trailing dot or underscore
+        if local[0] in "._" or local[-1] in "._":
             continue
-        
+
         # no consecutive dots
         if ".." in local:
             continue
@@ -454,12 +493,13 @@ def extract_proton_emails(text: str) -> list[str]:
 
     Proton rules applied:
         Local part:
-            - 1 to 40 characters
+            - 1 to 40 characters (Proton does not publicly document a limit;
+            40 is used as a conservative practical upper bound)
             - Only letters, numbers, dots, underscores, and hyphens allowed
-            - Cannot start or end with a dot, underscore, or hyphen
-            - No consecutive dots
-        Domain:
-            - Must be @proton.me, @protonmail.com, or @pm.me
+            - Must begin and end with an alphanumeric character
+            - No consecutive special characters (.. __ -- ._ etc.)
+    Domain:
+        - Must be @proton.me, @protonmail.com, or @pm.me
     """
     raw_list: list[str] = _PROTON_BASE.findall(text)
     refined_list: list[str] = []
@@ -474,11 +514,11 @@ def extract_proton_emails(text: str) -> list[str]:
         if not all(c.isalnum() or c in "._-" for c in local):
             continue
         
-        # no leading or trailing dot, underscore, or hyphen
-        if local[0] in "._-" or local[-1] in "._-":
+        # it must begin and end with alphanumeric
+        if not local[0].isalnum() or not local[-1].isalnum():
             continue
 
-        if ".." in local:
+        if _has_consecutive_specials(local):
             continue
 
         refined_list.append(email.lower())

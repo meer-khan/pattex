@@ -390,26 +390,78 @@ _PROTON_BASE = re.compile(
 
 
  
+
 # ── URL shared sub-patterns ───────────────────────────────────────────────────
- 
+_SCHEMES = r"https?|ftps?|sftp|wss?"
+#  username:password@
 _USERINFO = (
-    r"(?:[a-zA-Z0-9._~!$&'()*+,;=%-]+"
-    r"(?::[a-zA-Z0-9._~!$&'()*+,;=:%-]*)?)@"
+    r"(?:[a-zA-Z0-9._~!$&'()*+,;=%-]+" # no colon
+    r"(?::[a-zA-Z0-9._~!$&'()*+,;=:%-]*)?)@" # colon allowed
 )
-_IPV4 = (
-    r"(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}"
-    r"(?:25[0-5]|2[0-4]\d|[01]?\d\d?)"
-)
-_IPV6    = r"\[(?:[0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}\]"
+
+
+# IPV4 examples: 172.16.254.1 or 237.84.2.178 
+# very simple regex
+_IPV4 = r"(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)"
+
+
+# IPV6 example: 2001:0db8:85a3:0000:0000:8a2e:0370:7334
+_IPV6    = r"\[(?:[0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}\]" 
+
+
+# EXAMPLE:  www.google.com
+# [a-zA-Z0-9]        → w
+# [a-zA-Z0-9-]{0,61} → w
+# [a-zA-Z0-9]        → w
+# \.                  → .
+# ✅
+#  why doesn't middle just eat all remaining chars and leave nothing for the last [a-zA-Z0-9]?
+# Because the middle group is inside (?:...)? — the whole middle+last chunk is optional as a unit. The engine has two choices:
+# Option A:  match middle+last  →  needs at least 2 more chars after first
+# Option B:  skip entire group  →  single char label like "a."
+# When it tries Option A, it backtracks if middle eats too much and leaves nothing for last. So for www:
+# first  → w
+# middle tries {0,61} greedily → tries to take "ww"
+# last   → nothing left → backtrack
+# middle steps back → takes only "w"
+# last   → w ✅
+# Short answer: backtracking. The engine greedily takes as much as possible, 
+# then backs off one char to satisfy the mandatory final [a-zA-Z0-9].
+
+# EXPLAINATION OF REGEX
+# [a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?
+# First char — alphanumeric (required) [a-zA-Z0-9]
+# Middle — alphanumeric or hyphen, 0–61 chars (optional) [a-zA-Z0-9-]{0,61}
+# Last char — alphanumeric (required) [a-zA-Z0-9]
+# TLD: Top level domain: [a-zA-Z]{2,} -> com, net, org
 _DOMAIN  = r"(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}"
+
+# EXAMPLE: :8080
 _PORT    = r"(?::\d{1,5})?"
  
 # Tail: optional path, then optional query+fragment captured together.
+# This is a negated class — match anything EXCEPT:
+# \s          — whitespace
+# "  '        — quotes
+# < >         — angle brackets
+# ( )         — parentheses
+# [ ]         — square brackets
+# { }         — curly brackets
+# |  \  ^     — pipe, backslash, caret
+# EXAMPLE: https://example.com/users/profile 
+# /users/profile   → / + non-noise chars   ✅
+# no ? or #        → query/fragment skipped
 _TAIL = (
     r"(?:"
-    r"/[^\s\"'<>()\[\]{}|\\^]*"
-    r"(?:[?#][^\s\"'<>()\[\]{}|\\^]*)?"
+    r"/[^\s\"'<>()\[\]{}|\\^]*" # — PATH: slash + any non-noise chars
+    r"(?:[?#][^\s\"'<>()\[\]{}|\\^]*)?" #  — QUERY or FRAGMENT: ? or # + non-noise chars
     r")?"
+)
+
+_BARE_DOMAIN = (
+    r"(?<![/@:\w.])"
+    r"(?:www\.)?"
+    r"(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}"
 )
  
 # ── Schemed URL (strict mode) ─────────────────────────────────────────────────
@@ -445,35 +497,35 @@ _URL_STRICT_BASE = re.compile(
 #     re.IGNORECASE,
 # )
  
-# ── Protocol-relative  //host/path ───────────────────────────────────────────
+# # ── Protocol-relative  //host/path ───────────────────────────────────────────
  
-_URL_PROTOCOL_RELATIVE = re.compile(
-    r"//"
-    r"(?:" + _DOMAIN + r"|" + _IPV4 + r"|localhost)"
-    + _PORT + _TAIL,
-    re.IGNORECASE,
-)
+# _URL_PROTOCOL_RELATIVE = re.compile(
+#     r"//"
+#     r"(?:" + _DOMAIN + r"|" + _IPV4 + r"|localhost)"
+#     + _PORT + _TAIL,
+#     re.IGNORECASE,
+# )
  
-# ── Bare domain (permissive) ──────────────────────────────────────────────────
+# # ── Bare domain (permissive) ──────────────────────────────────────────────────
  
-_URL_BARE_DOMAIN = re.compile(
-    r"(?<![/@:\w.])"
-    r"(?:www\.)?"
-    r"(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}"
-    + _PORT + _TAIL,
-    re.IGNORECASE,
-)
+# _URL_BARE_DOMAIN = re.compile(
+#     r"(?<![/@:\w.])"
+#     r"(?:www\.)?"
+#     r"(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}"
+#     + _PORT + _TAIL,
+#     re.IGNORECASE,
+# )
  
-# ── Bare IPv4 (permissive) ────────────────────────────────────────────────────
+# # ── Bare IPv4 (permissive) ────────────────────────────────────────────────────
  
-_URL_BARE_IP = re.compile(
-    r"(?<![/@:\w.])"
-    + _IPV4
-    + _PORT + _TAIL,
-    re.IGNORECASE,
-)
+# _URL_BARE_IP = re.compile(
+#     r"(?<![/@:\w.])"
+#     + _IPV4
+#     + _PORT + _TAIL,
+#     re.IGNORECASE,
+# )
  
-# ── Localhost ─────────────────────────────────────────────────────────────────
+# # ── Localhost ─────────────────────────────────────────────────────────────────
  
 _URL_LOCALHOST = re.compile(
     r"(?<!\w)localhost" + _PORT + _TAIL,
@@ -501,33 +553,33 @@ _URL_TRAILING_NOISE = re.compile(r"[.,!?;:'\")>\]]+$")
 
 
 
-_DOMAIN = re.compile(
-    r"\b(?:[a-zA-Z0-9\-]+\.)+[a-zA-Z]{2,}\b",
-    re.IGNORECASE,
-)
+# _DOMAIN = re.compile(
+#     r"\b(?:[a-zA-Z0-9\-]+\.)+[a-zA-Z]{2,}\b",
+#     re.IGNORECASE,
+# )
 
-_IPV4 = re.compile(
-    r"\b"
-    r"(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}"
-    r"(?:25[0-5]|2[0-4]\d|[01]?\d\d?)"
-    r"\b"
-)
+# _IPV4 = re.compile(
+#     r"\b"
+#     r"(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}"
+#     r"(?:25[0-5]|2[0-4]\d|[01]?\d\d?)"
+#     r"\b"
+# )
 
-_IPV6 = re.compile(
-    r"\b"
-    r"(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}"        # full
-    r"|(?:[0-9a-fA-F]{1,4}:){1,7}:"                      # trailing ::
-    r"|:(?::[0-9a-fA-F]{1,4}){1,7}"                      # leading ::
-    r"|::(?:ffff(?::0{1,4})?:)?"                          # ::ffff:
-    r"(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}"
-    r"(?:25[0-5]|2[0-4]\d|[01]?\d\d?)"
-    r"\b",
-    re.IGNORECASE,
-)
+# _IPV6 = re.compile(
+#     r"\b"
+#     r"(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}"        # full
+#     r"|(?:[0-9a-fA-F]{1,4}:){1,7}:"                      # trailing ::
+#     r"|:(?::[0-9a-fA-F]{1,4}){1,7}"                      # leading ::
+#     r"|::(?:ffff(?::0{1,4})?:)?"                          # ::ffff:
+#     r"(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}"
+#     r"(?:25[0-5]|2[0-4]\d|[01]?\d\d?)"
+#     r"\b",
+#     re.IGNORECASE,
+# )
 
-_SLUG = re.compile(
-    r"\b[a-z0-9]+(?:-[a-z0-9]+)+\b"
-)
+# _SLUG = re.compile(
+#     r"\b[a-z0-9]+(?:-[a-z0-9]+)+\b"
+# )
 
 
 

@@ -1,8 +1,9 @@
 ## Changelog
 
-#### [0.4.0] - Unreleased
 
-##### Added
+### [0.4.0] - 2026-05-16
+
+#### Added
 
 **`url_extractor.py`**
 
@@ -15,7 +16,7 @@
 * `extract_urls_with_port(text, port)` — returns URLs with any port, or a specific port
 * `extract_unique_domains(text, root_only)` — unique hostnames or root domains across all URLs
 * `is_url(text, strict)` — validates whether a string is a valid URL
-* `allow_ipv4`, `allow_ipv6`, `allow_port`, `allow_tail`, `schemes` parameters on `extract_urls`
+* `allow_ipv4`, `allow_ipv6`, `allow_port`, `allow_tail`, `schemes` parameters added to `extract_urls`
 * `_build_strict_regex()` — dynamic regex builder with `lru_cache(maxsize=16)`
 * `_build_permissive_regex()` — single combined permissive regex with named groups, `lru_cache(maxsize=1)`
 
@@ -32,28 +33,30 @@
 **`_utils.py`**
 
 * `_get_root_domain(host)` — extracts root domain from hostname
-* `has_auth(url)` — checks if URL contains userinfo
-* `_is_ip_host(url)` — checks if URL host is an IP address
+* `has_auth(url)` — checks whether a URL contains userinfo
+* `_is_ip_host(url)` — checks whether a URL host is an IP address
 
 **`extractor_constants.py`**
 
 * `URL_SCHEMES` — `Literal` type for all supported schemes
 
-##### Changed
+#### Changed
 
-* `include_localhost` renamed to `allow_localhost` for naming consistency — **breaking change**
-* Permissive mode now runs a **single `finditer` scan** instead of 3–4 separate loops — protocol-relative, bare domain, bare IP, and localhost combined into one regex via named groups
+* `include_localhost` renamed to `allow_localhost` — **breaking change**
+* Permissive mode now runs a **single `finditer` scan** instead of 3–4 separate loops — protocol-relative, bare domain, bare IP, and localhost combined into one regex via named groups (`(?P<name>...)`)
 * `match.lastgroup` used to dispatch per-branch guard logic in permissive loop
 * Localhost always included in permissive mode implicitly — `allow_localhost` only controls strict mode
 * `_build_permissive_regex` takes no arguments — localhost always included in permissive
 * Schemed `http://localhost` always extracted in strict mode regardless of `allow_localhost`
 * `extract_secure_urls` and `extract_insecure_urls` have no `mode` parameter — scheme implies strictness
 
-##### Internal
+#### Internal
 
 * All raw pattern constants kept as plain strings in `regexes.py` — compiled only at assembly time
-* `lru_cache` on both builders to avoid recompilation on repeated calls with same flags
+* `lru_cache` on both builders avoids recompilation on repeated calls with same flags
 * `urlparse` import consolidated at top of `url_extractor.py`
+* Walrus operator used in `extract_urls_with_port` to avoid double `urlparse` call
+
 
 ### v0.3.1 - 2026-05-13
 
